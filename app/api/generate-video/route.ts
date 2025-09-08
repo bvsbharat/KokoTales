@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       status: status.status,
-      logs: status.logs,
+      logs: 'logs' in status ? status.logs : [],
     });
   } catch (error: any) {
     console.error("Error checking video status:", error);

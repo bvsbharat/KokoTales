@@ -2,6 +2,8 @@
 
 An AI-powered interactive storytelling application that creates personalized illustrated storybooks with magical AI characters.
 
+Live demo link : https://koko-tales.vercel.app/
+
 ## Features
 
 🎨 **Comic Book Style UI** - Vibrant neo-brutalist design with comic book aesthetics

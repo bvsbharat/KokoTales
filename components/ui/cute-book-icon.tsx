@@ -2,7 +2,7 @@ import React from 'react';
 
 interface CuteBookIconProps {
   className?: string;
-  'aria-hidden'?: boolean;
+  'aria-hidden'?: boolean | string;
 }
 
 const CuteBookIcon: React.FC<CuteBookIconProps> = ({ className = "w-6 h-6", ...props }) => {

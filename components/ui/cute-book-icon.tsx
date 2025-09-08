@@ -2,14 +2,15 @@ import React from 'react';
 
 interface CuteBookIconProps {
   className?: string;
-  'aria-hidden'?: boolean | string;
+  'aria-hidden'?: boolean | "true" | "false";
 }
 
-const CuteBookIcon: React.FC<CuteBookIconProps> = ({ className = "w-6 h-6", ...props }) => {
+const CuteBookIcon: React.FC<CuteBookIconProps> = ({ className = "w-6 h-6", 'aria-hidden': ariaHidden, ...props }) => {
   return (
     <svg
       viewBox="0 0 100 100"
       className={className}
+      aria-hidden={ariaHidden === "true" ? true : ariaHidden === "false" ? false : ariaHidden}
       {...props}
     >
       {/* Book shadow */}

@@ -294,7 +294,7 @@ export default function HomePage() {
                                     className="w-full h-full object-cover"
                                   />
                                 ) : (
-                                  <BookOpen className="w-6 h-6 text-white" />
+                                  <CuteBookIcon className="w-6 h-6 text-white" />
                                 )}
                               </div>
 

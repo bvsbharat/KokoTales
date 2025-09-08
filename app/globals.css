@@ -56,7 +56,7 @@
     
     .comic-title {
       @apply text-3xl;
-      text-shadow: 2px 2px 0px #FFD700, 4px 4px 0px #000000;
+      text-shadow: 2px 2px 0px #46cbe8, 4px 4px 0px #000000;
     }
     
     .comic-character-card {
@@ -122,7 +122,7 @@
   
   .comic-title {
     @apply text-4xl font-black uppercase tracking-wider text-comic-black;
-    text-shadow: 3px 3px 0px #FFD700, 6px 6px 0px #000000;
+    text-shadow: 3px 3px 0px #46cbe8, 6px 6px 0px #000000;
   }
   
   .comic-subtitle {

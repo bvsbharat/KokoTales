@@ -1,5 +1,6 @@
 export type StoryTheme = "funny" | "adventurous" | "educational" | "magical" | "mystery"
 export type StoryStyle = "comic" | "picture_book" | "fairy_tale" | "graphic_novel" | "pop_up"
+export type AgeGroup = "3-5" | "6-8" | "9-12" | "13+"
 
 export interface StoryConfig {
   prompt: string
@@ -8,6 +9,8 @@ export interface StoryConfig {
   characters: string[]
   setting: string
   characterCount: number
+  pageCount?: number
+  targetAge?: AgeGroup
 }
 
 export interface Character {
@@ -49,6 +52,9 @@ export interface GeneratedStory {
   pages: StoryPage[]
   title: string
   createdAt: Date
+  coverImage?: string // Base64 encoded cover image
+  coverVideo?: string // URL to the generated cover video
+  coverVideoRequestId?: string // FAL request ID for video generation
 }
 
 export enum GenerationState {

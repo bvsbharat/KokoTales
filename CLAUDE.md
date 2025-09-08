@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with the KokoTales application.
+This file provides guidance to Claude Code (claude.ai/code) when working with the MemoryTales.ai application.
 
 ## Development Commands
 
@@ -19,7 +19,7 @@ This app requires Google Gemini API access:
 
 ## Architecture Overview
 
-KokoTales is a Next.js-based AI storytelling application that creates personalized illustrated storybooks using Google's Gemini API.
+MemoryTales.ai is a Next.js-based AI storytelling application that creates personalized illustrated storybooks using Google's Gemini API.
 
 ### Application Flow
 1. **Story Input** (`GenerationState.INPUT`) - User configures story parameters

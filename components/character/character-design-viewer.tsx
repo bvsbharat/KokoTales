@@ -1,119 +1,136 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { RefreshCw, Check, X, ArrowLeft, ArrowRight } from "lucide-react"
-import { Character } from "@/lib/types"
-import { geminiService } from "@/lib/ai-services/gemini-service"
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { RefreshCw, Check, X, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { Character } from "@/lib/types";
+import { geminiService } from "@/lib/ai-services/gemini-service";
 
 interface CharacterDesignViewerProps {
-  characters: Character[]
-  storyStyle: string
-  onCharactersApproved: (approvedCharacters: Character[]) => void
-  onBack: () => void
+  characters: Character[];
+  storyStyle: string;
+  onCharactersApproved: (approvedCharacters: Character[]) => void;
+  onBack: () => void;
 }
 
 export default function CharacterDesignViewer({
   characters,
   storyStyle,
   onCharactersApproved,
-  onBack
+  onBack,
 }: CharacterDesignViewerProps) {
-  const [designCharacters, setDesignCharacters] = useState<Character[]>(characters)
-  const [currentCharacterIndex, setCurrentCharacterIndex] = useState(0)
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [generatingCharacterId, setGeneratingCharacterId] = useState<string | null>(null)
-  const [progress, setProgress] = useState(0)
+  const [designCharacters, setDesignCharacters] =
+    useState<Character[]>(characters);
+  const [currentCharacterIndex, setCurrentCharacterIndex] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingCharacterId, setGeneratingCharacterId] = useState<
+    string | null
+  >(null);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    generateInitialDesigns()
-  }, [])
+    generateInitialDesigns();
+  }, []);
 
   const generateInitialDesigns = async () => {
-    setIsGenerating(true)
-    const updatedCharacters = [...designCharacters]
+    setIsGenerating(true);
+    const updatedCharacters = [...designCharacters];
 
     for (let i = 0; i < updatedCharacters.length; i++) {
-      const character = updatedCharacters[i]
-      setGeneratingCharacterId(character.id)
-      setProgress((i / updatedCharacters.length) * 100)
+      const character = updatedCharacters[i];
+      setGeneratingCharacterId(character.id);
+      setProgress((i / updatedCharacters.length) * 100);
 
       try {
-        const designImage = await geminiService.generateCharacterDesign(character, storyStyle)
+        const designImage = await geminiService.generateCharacterDesign(
+          character,
+          storyStyle
+        );
         updatedCharacters[i] = {
           ...character,
           generatedDesignImage: designImage,
-          designApproved: false
-        }
-        setDesignCharacters([...updatedCharacters])
+          designApproved: false,
+        };
+        setDesignCharacters([...updatedCharacters]);
       } catch (error) {
-        console.error(`Failed to generate design for ${character.name}:`, error)
+        console.error(
+          `Failed to generate design for ${character.name}:`,
+          error
+        );
         // Keep character without design for manual retry
       }
     }
 
-    setProgress(100)
-    setGeneratingCharacterId(null)
-    setIsGenerating(false)
-  }
+    setProgress(100);
+    setGeneratingCharacterId(null);
+    setIsGenerating(false);
+  };
 
   const regenerateCharacterDesign = async (characterId: string) => {
-    const character = designCharacters.find(c => c.id === characterId)
-    if (!character) return
+    const character = designCharacters.find((c) => c.id === characterId);
+    if (!character) return;
 
-    setGeneratingCharacterId(characterId)
+    setGeneratingCharacterId(characterId);
     try {
-      const designImage = await geminiService.generateCharacterDesign(character, storyStyle)
-      const updatedCharacters = designCharacters.map(c =>
+      const designImage = await geminiService.generateCharacterDesign(
+        character,
+        storyStyle
+      );
+      const updatedCharacters = designCharacters.map((c) =>
         c.id === characterId
           ? { ...c, generatedDesignImage: designImage, designApproved: false }
           : c
-      )
-      setDesignCharacters(updatedCharacters)
+      );
+      setDesignCharacters(updatedCharacters);
     } catch (error) {
-      console.error(`Failed to regenerate design for ${character.name}:`, error)
+      console.error(
+        `Failed to regenerate design for ${character.name}:`,
+        error
+      );
     } finally {
-      setGeneratingCharacterId(null)
+      setGeneratingCharacterId(null);
     }
-  }
+  };
 
   const approveCharacter = (characterId: string) => {
-    const updatedCharacters = designCharacters.map(c =>
+    const updatedCharacters = designCharacters.map((c) =>
       c.id === characterId ? { ...c, designApproved: true } : c
-    )
-    setDesignCharacters(updatedCharacters)
-  }
+    );
+    setDesignCharacters(updatedCharacters);
+  };
 
   const rejectCharacter = (characterId: string) => {
-    const updatedCharacters = designCharacters.map(c =>
+    const updatedCharacters = designCharacters.map((c) =>
       c.id === characterId ? { ...c, designApproved: false } : c
-    )
-    setDesignCharacters(updatedCharacters)
-  }
+    );
+    setDesignCharacters(updatedCharacters);
+  };
 
-  const allCharactersApproved = designCharacters.every(c => c.designApproved && c.generatedDesignImage)
-  const currentCharacter = designCharacters[currentCharacterIndex]
+  const allCharactersApproved = designCharacters.every(
+    (c) => c.designApproved && c.generatedDesignImage
+  );
+  const currentCharacter = designCharacters[currentCharacterIndex];
 
   const handleProceedToStory = () => {
     if (allCharactersApproved) {
-      onCharactersApproved(designCharacters)
+      onCharactersApproved(designCharacters);
     }
-  }
+  };
 
   const nextCharacter = () => {
     if (currentCharacterIndex < designCharacters.length - 1) {
-      setCurrentCharacterIndex(currentCharacterIndex + 1)
+      setCurrentCharacterIndex(currentCharacterIndex + 1);
     }
-  }
+  };
 
   const prevCharacter = () => {
     if (currentCharacterIndex > 0) {
-      setCurrentCharacterIndex(currentCharacterIndex - 1)
+      setCurrentCharacterIndex(currentCharacterIndex - 1);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-comic-yellow p-4">
@@ -122,14 +139,19 @@ export default function CharacterDesignViewer({
         <motion.header
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="text-center mb-6"
+          className="mb-6"
         >
-          <h1 className="comic-title text-4xl md:text-5xl mb-4">
-            Character Designs
-          </h1>
-          <p className="comic-text text-lg">
-            Review and approve your character designs before creating the story
-          </p>
+          <div className="mb-4">
+            <Button onClick={onBack} variant="outline">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Characters
+            </Button>
+          </div>
+          <div className="text-center">
+            <h1 className="comic-title text-4xl md:text-5xl mb-4">
+              Character Designs
+            </h1>
+          </div>
         </motion.header>
 
         {/* Progress Bar */}
@@ -137,17 +159,69 @@ export default function CharacterDesignViewer({
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="mb-6"
+            className="space-y-6"
           >
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-center mb-4">
-                  <div className="animate-spin w-8 h-8 border-4 border-black border-t-comic-blue rounded-full mx-auto mb-2" />
-                  <p className="comic-text">Generating character designs...</p>
+            <Card className="animate-bounce-in comic-panel">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Generating Characters...</span>
+                  <span className="text-sm font-normal">
+                    {Math.floor((progress / 100) * designCharacters.length) + 1} of {designCharacters.length}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Loading Placeholder */}
+                  <div className="text-center">
+                    <div className="w-full h-96 bg-gray-200 border-4 border-black flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="animate-spin w-12 h-12 border-4 border-black border-t-comic-blue rounded-full mx-auto mb-4" />
+                        <p className="comic-text">Generating design...</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Info */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-bold text-lg mb-2">Progress</h3>
+                      <p className="comic-text">Creating amazing character designs for your story...</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Progress
+                        value={progress}
+                        className="h-4 border-2 border-black"
+                      />
+                      <p className="text-sm text-gray-600">
+                        {Math.round(progress)}% Complete
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <Progress value={progress} className="h-4 border-2 border-black" />
               </CardContent>
             </Card>
+
+            {/* Navigation Placeholder */}
+            <div className="flex justify-between items-center">
+              <div className="w-24 h-10 bg-gray-200 border-2 border-black"></div>
+              <div className="flex gap-2">
+                {designCharacters.map((_, index) => (
+                  <div
+                    key={index}
+                    className="w-3 h-3 rounded-full border-2 border-black bg-gray-300"
+                  />
+                ))}
+              </div>
+              <div className="w-24 h-10 bg-gray-200 border-2 border-black"></div>
+            </div>
+
+            {/* Action Buttons Placeholder */}
+            <div className="flex justify-center gap-4 pt-4">
+              <div className="w-32 h-10 bg-gray-200 border-2 border-black"></div>
+              <div className="w-48 h-12 bg-gray-200 border-2 border-black"></div>
+            </div>
           </motion.div>
         )}
 
@@ -158,7 +232,7 @@ export default function CharacterDesignViewer({
             animate={{ scale: 1, opacity: 1 }}
             className="space-y-6"
           >
-            <Card className="animate-bounce-in">
+            <Card className="animate-bounce-in comic-panel">
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>{currentCharacter.name}</span>
@@ -180,20 +254,25 @@ export default function CharacterDesignViewer({
                           </div>
                         </div>
                       ) : currentCharacter.generatedDesignImage ? (
-                        <img
-                          src={currentCharacter.generatedDesignImage}
-                          alt={`${currentCharacter.name} design`}
-                          className="w-full h-96 object-cover border-4 border-black"
+                        <div
+                          className="w-full h-96 border-4 border-black bg-contain bg-center bg-no-repeat bg-gray-50"
+                          style={{
+                            backgroundImage: `url(${currentCharacter.generatedDesignImage})`,
+                          }}
+                          role="img"
+                          aria-label={`${currentCharacter.name} design`}
                         />
                       ) : (
                         <div className="w-full h-96 bg-gray-200 border-4 border-black flex items-center justify-center">
                           <div className="text-center">
                             <X className="w-12 h-12 text-comic-red mx-auto mb-2" />
-                            <p className="comic-text">Design generation failed</p>
+                            <p className="comic-text">
+                              Design generation failed
+                            </p>
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Approval Status */}
                       {currentCharacter.designApproved && (
                         <div className="absolute top-2 right-2 bg-comic-green text-white p-2 border-2 border-black">
@@ -206,18 +285,30 @@ export default function CharacterDesignViewer({
                   {/* Character Info & Controls */}
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-bold text-lg mb-2">Character Details</h3>
-                      <p className="comic-text">{currentCharacter.description || currentCharacter.generatedDescription}</p>
+                      <h3 className="font-bold text-lg mb-2">
+                        Character Details
+                      </h3>
+                      <p className="comic-text">
+                        {currentCharacter.description ||
+                          currentCharacter.generatedDescription}
+                      </p>
                     </div>
 
                     <div className="space-y-3">
                       <h4 className="font-bold">Actions:</h4>
-                      
+
                       <div className="flex gap-2">
                         <Button
                           onClick={() => approveCharacter(currentCharacter.id)}
-                          variant={currentCharacter.designApproved ? "default" : "outline"}
-                          disabled={!currentCharacter.generatedDesignImage || generatingCharacterId === currentCharacter.id}
+                          variant={
+                            currentCharacter.designApproved
+                              ? "default"
+                              : "outline"
+                          }
+                          disabled={
+                            !currentCharacter.generatedDesignImage ||
+                            generatingCharacterId === currentCharacter.id
+                          }
                           className="flex-1"
                         >
                           <Check className="w-4 h-4 mr-2" />
@@ -226,8 +317,14 @@ export default function CharacterDesignViewer({
 
                         <Button
                           onClick={() => rejectCharacter(currentCharacter.id)}
-                          variant={!currentCharacter.designApproved ? "default" : "outline"}
-                          disabled={generatingCharacterId === currentCharacter.id}
+                          variant={
+                            !currentCharacter.designApproved
+                              ? "default"
+                              : "outline"
+                          }
+                          disabled={
+                            generatingCharacterId === currentCharacter.id
+                          }
                           className="flex-1"
                         >
                           <X className="w-4 h-4 mr-2" />
@@ -236,7 +333,9 @@ export default function CharacterDesignViewer({
                       </div>
 
                       <Button
-                        onClick={() => regenerateCharacterDesign(currentCharacter.id)}
+                        onClick={() =>
+                          regenerateCharacterDesign(currentCharacter.id)
+                        }
                         variant="secondary"
                         disabled={generatingCharacterId === currentCharacter.id}
                         className="w-full"
@@ -268,43 +367,39 @@ export default function CharacterDesignViewer({
                     onClick={() => setCurrentCharacterIndex(index)}
                     className={`w-3 h-3 rounded-full border-2 border-black ${
                       index === currentCharacterIndex
-                        ? 'bg-comic-blue'
+                        ? "bg-comic-blue"
                         : designCharacters[index].designApproved
-                        ? 'bg-comic-green'
-                        : 'bg-gray-300'
+                        ? "bg-comic-green"
+                        : "bg-gray-300"
                     }`}
                   />
                 ))}
               </div>
 
-              <Button
-                onClick={nextCharacter}
-                variant="outline"
-                disabled={currentCharacterIndex === designCharacters.length - 1}
-              >
-                Next
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              {allCharactersApproved ? (
+                <Button
+                  onClick={handleProceedToStory}
+                  size="lg"
+                  className="px-6 py-3"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Create Story
+                </Button>
+              ) : (
+                <Button
+                  onClick={nextCharacter}
+                  variant="outline"
+                  disabled={currentCharacterIndex === designCharacters.length - 1}
+                >
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-center gap-4 pt-4">
-              <Button onClick={onBack} variant="outline">
-                Back to Characters
-              </Button>
-              
-              <Button
-                onClick={handleProceedToStory}
-                disabled={!allCharactersApproved}
-                size="lg"
-                className="px-8 py-3"
-              >
-                {allCharactersApproved ? 'Create Story' : `Approve All Characters (${designCharacters.filter(c => c.designApproved).length}/${designCharacters.length})`}
-              </Button>
-            </div>
           </motion.div>
         )}
       </div>
     </div>
-  )
+  );
 }

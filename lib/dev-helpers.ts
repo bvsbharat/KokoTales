@@ -82,7 +82,9 @@ export const createTestStoryConfig = (): StoryConfig => ({
   style: 'comic',
   characters: [],
   setting: 'Enchanted Forest Kingdom',
-  characterCount: 2
+  characterCount: 2,
+  pageCount: 5,
+  targetAge: '6-8'
 });
 
 // Development mode check

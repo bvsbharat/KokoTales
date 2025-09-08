@@ -1,4 +1,4 @@
-# KokoTales 📚✨
+# MemoryTales.ai 📚✨
 
 An AI-powered interactive storytelling application that creates personalized illustrated storybooks with magical AI characters.
 
@@ -33,7 +33,7 @@ An AI-powered interactive storytelling application that creates personalized ill
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd KokoTales
+   cd MemoryTales.ai
    ```
 
 2. **Install dependencies**
@@ -62,7 +62,7 @@ An AI-powered interactive storytelling application that creates personalized ill
 ## Project Structure
 
 ```
-KokoTales/
+MemoryTales.ai/
 ├── app/                    # Next.js app directory
 │   ├── globals.css        # Global styles with comic theme
 │   ├── layout.tsx         # Root layout component

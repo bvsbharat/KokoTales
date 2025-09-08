@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "KokoTales - AI-Powered Interactive Storytelling",
+  title: "MemoryTales.ai - AI-Powered Interactive Storytelling",
   description: "Create personalized illustrated storybooks with AI-generated characters and narratives",
   keywords: "AI storytelling, personalized books, character creation, illustrated stories, children's books",
 };

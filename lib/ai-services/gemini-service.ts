@@ -103,20 +103,34 @@ export class GeminiService {
         }
     }
 
-    async generateCharacterDescriptions(characters: Character[]): Promise<Character[]> {
+    async generateCharacterDescriptions(characters: Character[], config?: StoryConfig): Promise<Character[]> {
         console.log('[GEMINI] Generating character descriptions...');
         console.log(`[GEMINI] Describing characters: ${characters.map(c => c.name).join(', ')}`);
         
+        const targetAge = config?.targetAge || '6-8';
+        console.log(`[GEMINI] Character descriptions for age: ${targetAge}`);
+        
+        const ageAppropriate = {
+            '3-5': 'very simple, safe, and familiar concepts. Focus on basic emotions like happy, sad, friendly. Avoid complex traits.',
+            '6-8': 'elementary concepts with some personality depth. Characters can have hobbies, likes/dislikes, and simple goals.',
+            '9-12': 'more developed personalities with interests, skills, and character growth potential. Can handle some complexity.',
+            '13+': 'complex personality traits, motivations, and character development. Can include depth and nuance.'
+        };
+
         const prompt = `
-Generate creative cartoon character descriptions for a children's storybook. For each character, create:
+Generate creative cartoon character descriptions for a children's storybook targeted at ${targetAge} year olds. For each character, create:
 1. A detailed physical appearance description suitable for cartoon illustration
-2. A unique personality that will make them engaging in the story
-3. A clear role they could play in adventures
+2. A unique personality that will make them engaging in the story (${ageAppropriate[targetAge]})
+3. A clear role they could play in adventures appropriate for ${targetAge} year olds
 
 Characters to describe:
 ${characters.map(char => `- ${char.name}`).join('\n')}
 
-Make each character unique, memorable, and child-friendly. Focus on visual details that an illustrator could use to create consistent cartoon representations.
+AGE-APPROPRIATE GUIDELINES for ${targetAge}:
+- Character traits and personalities should be ${ageAppropriate[targetAge]}
+- Make each character unique, memorable, and child-friendly for ${targetAge} year olds
+- Focus on visual details that an illustrator could use to create consistent cartoon representations
+- Ensure all character elements are completely appropriate for the ${targetAge} age group
 
 Return as JSON array with objects containing: name, description, personality, appearance, role.
         `;
@@ -369,22 +383,65 @@ GENERATE A CHARACTER IMAGE NOW.`;
         console.log(`[GEMINI] Story theme: ${config.theme}, style: ${config.style}`);
         console.log(`[GEMINI] Characters: ${characters.map(c => c.name).join(', ')}`);
 
+        const pageCount = config.pageCount || 5;
+        const targetAge = config.targetAge || '6-8';
+        
+        console.log(`[GEMINI] Target age: ${targetAge}, Page count: ${pageCount}`);
+        
+        // Age-appropriate content guidelines
+        const ageGuidelines = {
+            '3-5': {
+                vocabulary: 'very simple words and short sentences',
+                complexity: 'basic concepts and simple storylines',
+                themes: 'everyday activities, friendship, and basic emotions',
+                dialogue: 'short, simple phrases that preschoolers can understand'
+            },
+            '6-8': {
+                vocabulary: 'elementary reading level with some challenging words',
+                complexity: 'clear storylines with simple problem-solving',
+                themes: 'adventures, learning new things, overcoming small challenges',
+                dialogue: 'conversational but age-appropriate language'
+            },
+            '9-12': {
+                vocabulary: 'intermediate vocabulary with more complex sentence structures',
+                complexity: 'multi-layered plots with character development',
+                themes: 'more complex adventures, personal growth, friendship challenges',
+                dialogue: 'natural conversations with some sophisticated language'
+            },
+            '13+': {
+                vocabulary: 'advanced vocabulary and complex sentence structures',
+                complexity: 'sophisticated plots with deeper themes and character arcs',
+                themes: 'coming-of-age, identity, complex relationships, moral dilemmas',
+                dialogue: 'realistic teen/young adult conversations'
+            }
+        };
+
+        const currentAgeGroup = ageGuidelines[targetAge];
+
         const system_prompt = `
-You are an expert children's storybook creator. Create a complete, engaging ${config.theme} story in ${config.style} format.
+You are an expert children's storybook creator. Create a complete, engaging ${config.theme} story in ${config.style} format for ages ${targetAge}.
 
 STORY REQUIREMENTS:
-- Create EXACTLY 4-6 pages of story content
+- Create EXACTLY ${pageCount} pages of story content
 - Each page must have EXACTLY 2-3 panels for optimal pacing
 - Each panel must have clear visual descriptions suitable for illustration
-- Include age-appropriate dialogue and narration
+- Include age-appropriate dialogue and narration for ${targetAge} year olds
 - Ensure story has beginning, middle, and satisfying conclusion
 - Use all characters meaningfully throughout the story
+
+AGE-APPROPRIATE CONTENT for ${targetAge} year olds:
+- Vocabulary: ${currentAgeGroup.vocabulary}
+- Story complexity: ${currentAgeGroup.complexity}  
+- Themes: ${currentAgeGroup.themes}
+- Dialogue style: ${currentAgeGroup.dialogue}
 
 STORY DETAILS:
 Prompt: ${config.prompt}
 Setting: ${config.setting}
 Theme: ${config.theme}
 Style: ${config.style}
+Target Age: ${targetAge} years old
+Number of Pages: ${pageCount}
 
 Characters:
 ${characters.map(char => `- ${char.name}: ${char.description || char.generatedDescription}`).join('\n')}
@@ -393,15 +450,16 @@ PANEL STRUCTURE:
 - Each panel needs an id (e.g., "panel-1", "panel-2")
 - Detailed description of the visual scene for illustration
 - List of character names present in the panel
-- Dialogue array (if any characters speak)
-- Narration text (if needed for storytelling)
+- Dialogue array (if any characters speak) - appropriate for ${targetAge} year olds
+- Narration text (if needed for storytelling) - written for ${targetAge} reading level
 
-STORY FLOW:
+STORY FLOW for ${pageCount} pages:
 - Page 1: Introduction and setup
-- Pages 2-4: Development and adventure/conflict
-- Pages 5-6: Resolution and conclusion
+- Middle pages: Development, adventure, and conflict appropriate for ${targetAge}
+- Final page: Resolution and satisfying conclusion
 - Maintain character consistency across all pages
 - Create visual variety in panel descriptions
+- Ensure pacing works well across exactly ${pageCount} pages
 
 Return as structured JSON with title, characters array, and pages array.
         `;
@@ -454,6 +512,123 @@ Return as structured JSON with title, characters array, and pages array.
         });
     }
 
+    async generateCoverImage(story: { title: string, config: any, characters: Character[] }): Promise<string> {
+        console.log(`[GEMINI] Generating cover image for: ${story.title}`);
+
+        const characterList = story.characters.map(char => char.name).join(', ');
+        const targetAge = story.config.targetAge || '6-8';
+
+        const textParts = [
+            { text: `IMPORTANT: You MUST generate an image. This is required.
+
+Create a stunning book cover illustration for a children's storybook.
+
+BOOK DETAILS:
+Title: "${story.title}"
+Style: ${story.config.style}
+Theme: ${story.config.theme}
+Characters: ${characterList}
+Target Age: ${targetAge} years old
+Setting: ${story.config.setting}
+
+COVER REQUIREMENTS:
+- Create a beautiful, eye-catching book cover that captures the essence of the story
+- Full page illustration with integrated title text
+- Show main characters in an engaging scene that represents the story
+- Professional children's book cover design
+- Bright, vibrant colors appropriate for ${targetAge} year olds
+- The title "${story.title}" should be prominently displayed with beautiful typography
+- Include visual elements that hint at the ${story.config.theme} theme
+- Set in ${story.config.setting}
+- ${story.config.style} book art style
+- Portrait orientation suitable for book cover
+- High-quality illustration that would attract young readers
+
+GENERATE A STUNNING BOOK COVER NOW.` }
+        ];
+
+        // Add character reference images if available
+        const imageParts: any[] = [];
+        story.characters.forEach(char => {
+            if (char.generatedDesignImage) {
+                const base64Data = char.generatedDesignImage.split(',')[1];
+                const mimeType = char.generatedDesignImage.match(/data:([^;]+)/)?.[1] || 'image/png';
+                
+                imageParts.push({
+                    inlineData: {
+                        data: base64Data,
+                        mimeType: mimeType,
+                    }
+                });
+            } else if (char.base64Image && char.mimeType) {
+                imageParts.push({
+                    inlineData: {
+                        data: char.base64Image,
+                        mimeType: char.mimeType,
+                    }
+                });
+            }
+        });
+
+        return this.callWithFallback(async () => {
+            let lastError: Error | null = null;
+            
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                try {
+                    console.log(`[GEMINI] Attempt ${attempt}/2 - Calling Gemini API for cover generation...`);
+
+                    const response = await callGeminiWithFallback(async (client) =>
+                        client.models.generateContent({
+                            model: 'gemini-2.5-flash-image-preview',
+                            contents: [
+                                { role: 'user', parts: [...imageParts, ...textParts] }
+                            ],
+                            config: {
+                                responseModalities: [Modality.IMAGE, Modality.TEXT],
+                            },
+                        })
+                    );
+
+                    console.log('[GEMINI] Received cover image response from Gemini API');
+                    
+                    if (response.candidates?.[0]?.content?.parts) {
+                        for (const part of response.candidates[0].content.parts) {
+                            if (part.inlineData) {
+                                const { data, mimeType } = part.inlineData;
+                                if (data) {
+                                    console.log(`[GEMINI] Generated cover image: ${mimeType}, size: ${Math.round(data.length / 1024)}KB`);
+                                    return `data:${mimeType};base64,${data}`;
+                                }
+                            }
+                        }
+                    }
+
+                    const errorMsg = `Cover image generation failed: No image data in response (attempt ${attempt}/2)`;
+                    console.error(`[GEMINI] ${errorMsg}`);
+                    lastError = new Error(errorMsg);
+                    
+                    if (attempt < 2) {
+                        console.log('[GEMINI] Retrying cover generation...');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                    
+                } catch (error) {
+                    const errorMsg = `Cover generation attempt ${attempt}/2 failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+                    console.error(`[GEMINI] ${errorMsg}`);
+                    lastError = new Error(errorMsg);
+                    
+                    if (attempt < 2) {
+                        console.log('[GEMINI] Retrying after error...');
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+            }
+
+            console.error('[GEMINI] All cover generation attempts failed');
+            throw lastError || new Error("Cover generation failed after 2 attempts");
+        });
+    }
+
     async generatePanelIllustration(panel: Panel, characters: Character[], storyStyle: string): Promise<string> {
         console.log(`[GEMINI] Generating illustration for panel ${panel.id}...`);
         console.log(`[GEMINI] Panel description: ${panel.description.substring(0, 100)}...`);
@@ -477,7 +652,7 @@ Return as structured JSON with title, characters array, and pages array.
         const textParts = [
             { text: `IMPORTANT: You MUST generate an image. This is required.
 
-Style: A dynamic colorful ${storyStyle} illustration panel with integrated text. Vertical 9:16 aspect ratio.
+Style: A full-page dynamic colorful ${storyStyle} illustration. Create a complete scene that fills the entire page with integrated text elements.
 
 Panel Scene: ${panel.description}
 
@@ -488,12 +663,15 @@ TEXT TO INCLUDE IN IMAGE:
 ${textContent || 'No dialogue or narration for this panel'}
 
 CRITICAL REQUIREMENTS:
+- Create a FULL PAGE illustration that fills the entire image space
 - Use the provided character reference images to maintain consistency
 - Include speech bubbles, dialogue boxes, and narration text WITHIN the image
 - Match character appearances exactly to the reference images
 - Render all text clearly and legibly as part of the illustration
 - Use appropriate ${storyStyle} style speech bubbles and text formatting
 - Text should be well-positioned and integrated with the scene
+- Make the illustration detailed and engaging, suitable for a full page
+- Use full aspect ratio to create an immersive story panel
 
 Art Requirements:
 - ${storyStyle} book illustration style with integrated text
@@ -502,8 +680,10 @@ Art Requirements:
 - Character consistency with reference images
 - Text rendered natively in the image (speech bubbles, narration boxes)
 - High contrast for easy reading
+- Full-page composition with rich background details
+- Professional storybook page quality
 
-GENERATE A STORY PANEL WITH INTEGRATED TEXT NOW.` }
+GENERATE A FULL-PAGE STORY ILLUSTRATION WITH INTEGRATED TEXT NOW.` }
         ];
 
         // Add character reference images - prioritize generated designs over uploaded images

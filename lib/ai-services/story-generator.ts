@@ -1,6 +1,9 @@
 import { geminiService } from "./gemini-service";
+import { videoGenerator } from "./video-generator";
 import { StoryConfig, Character, GeneratedStory, StoryPage, Panel } from "@/lib/types";
 import { generateId } from "@/lib/utils";
+import { characterStorage } from "@/lib/storage/character-storage";
+import { storyStorage } from "@/lib/storage/story-storage";
 
 export class StoryGenerator {
     async generateCompleteStory(
@@ -9,26 +12,26 @@ export class StoryGenerator {
         onProgress?: (message: string, progress: number) => void
     ): Promise<GeneratedStory> {
         try {
-            onProgress?.("Preparing characters...", 10);
+            onProgress?.("Preparing characters...", 5);
 
-            // Step 1: Generate character descriptions for those without uploaded images
-            const charactersWithDescriptions = await this.enhanceCharacters(characters, onProgress);
+            // Step 1: Load existing characters from storage or enhance new ones
+            const charactersWithDescriptions = await this.loadAndEnhanceCharacters(characters, config, onProgress);
 
-            onProgress?.("Creating story structure...", 30);
+            onProgress?.("Creating story structure...", 25);
 
             // Step 2: Generate the main story content
             const storyData = await geminiService.generateStory(config, charactersWithDescriptions);
 
-            onProgress?.("Using approved character designs...", 50);
+            onProgress?.("Using approved character designs...", 35);
 
             // Characters should already have approved designs at this point
-            const charactersWithDesigns = charactersWithDescriptions.filter(char => char.generatedDesignImage);
+            const charactersWithDesigns = charactersWithDescriptions.filter(char => char.generatedDesignImage || char.base64Image);
             
             if (charactersWithDesigns.length !== charactersWithDescriptions.length) {
                 console.warn('[STORY_GENERATOR] Some characters missing approved designs, this should not happen');
             }
 
-            onProgress?.("Creating panel illustrations...", 60);
+            onProgress?.("Creating panel illustrations...", 45);
 
             // Step 3: Generate panel illustrations using character design references
             const pagesWithIllustrations = await this.generatePanelArt(
@@ -38,17 +41,86 @@ export class StoryGenerator {
                 onProgress
             );
 
-            onProgress?.("Finalizing storybook...", 100);
+            onProgress?.("Generating cover image...", 85);
 
-            // Step 4: Compile final story
+            // Step 4: Generate cover image
+            let coverImage: string | undefined;
+            try {
+                coverImage = await geminiService.generateCoverImage({
+                    title: storyData.title,
+                    config,
+                    characters: charactersWithDesigns
+                });
+            } catch (error) {
+                console.warn('[STORY_GENERATOR] Failed to generate cover image:', error);
+                // Continue without cover image
+            }
+
+            onProgress?.("Finalizing storybook...", 85);
+
+            // Step 5: Compile final story
             const finalStory: GeneratedStory = {
                 id: generateId(),
                 config,
                 characters: charactersWithDesigns,
                 pages: pagesWithIllustrations,
                 title: storyData.title,
-                createdAt: new Date()
+                createdAt: new Date(),
+                coverImage
             };
+
+            // Step 6: Save characters and story to storage
+            onProgress?.("Saving to library...", 90);
+            
+            try {
+                // Save characters for future use
+                characterStorage.saveCharacters(charactersWithDesigns);
+                
+                // Save the complete story
+                const saved = storyStorage.saveStory(finalStory);
+                if (saved) {
+                    console.log('[STORY_GENERATOR] Story saved to library successfully');
+                } else {
+                    console.warn('[STORY_GENERATOR] Failed to save story to library (storage full?)');
+                }
+            } catch (error) {
+                console.error('[STORY_GENERATOR] Error saving to storage:', error);
+                // Don't fail the story generation if storage fails
+            }
+
+            // Step 7: Automatically generate cover video if cover image exists
+            if (coverImage) {
+                try {
+                    onProgress?.("Creating animated cover video...", 95);
+                    
+                    const videoResult = await videoGenerator.generateCoverVideo(finalStory, {
+                        duration: "8s",
+                        resolution: "720p",
+                        generateAudio: true
+                    });
+
+                    console.log('[STORY_GENERATOR] Cover video generated automatically:', videoResult.requestId);
+                    
+                    // Add video URL to the final story object
+                    finalStory.coverVideo = videoResult.videoUrl;
+                    finalStory.coverVideoRequestId = videoResult.requestId;
+                    
+                    // Update saved story with video information
+                    try {
+                        storyStorage.saveStory(finalStory);
+                    } catch (error) {
+                        console.warn('[STORY_GENERATOR] Failed to update story with video info:', error);
+                    }
+                    
+                    onProgress?.("Story and video complete!", 100);
+                } catch (error) {
+                    console.warn('[STORY_GENERATOR] Failed to generate cover video automatically:', error);
+                    // Don't fail the story generation if video generation fails
+                    onProgress?.("Story complete! (Video generation failed)", 100);
+                }
+            } else {
+                onProgress?.("Story complete!", 100);
+            }
 
             return finalStory;
 
@@ -58,8 +130,59 @@ export class StoryGenerator {
         }
     }
 
+    private async loadAndEnhanceCharacters(
+        characters: Character[],
+        config: StoryConfig,
+        onProgress?: (message: string, progress: number) => void
+    ): Promise<Character[]> {
+        onProgress?.("Loading saved characters...", 10);
+        
+        // Try to load characters from storage first
+        const characterNames = characters.map(c => c.name);
+        const loadedCharacters = characterStorage.loadCharactersForStory(characterNames);
+        
+        // Merge loaded characters with provided ones
+        const mergedCharacters = characters.map(providedChar => {
+            const storedChar = loadedCharacters.find(loaded => 
+                loaded.name.toLowerCase() === providedChar.name.toLowerCase()
+            );
+            
+            if (storedChar && (storedChar.generatedDesignImage || storedChar.base64Image)) {
+                console.log(`[STORY_GENERATOR] Using stored character: ${storedChar.name}`);
+                return {
+                    ...providedChar,
+                    ...storedChar,
+                    // Keep the original ID from provided character
+                    id: providedChar.id
+                };
+            }
+            
+            return providedChar;
+        });
+
+        // Generate descriptions for characters that still need them
+        const charactersNeedingDescriptions = mergedCharacters.filter(char => 
+            !char.description && !char.generatedDescription && !char.base64Image
+        );
+        
+        if (charactersNeedingDescriptions.length > 0) {
+            onProgress?.(`Describing ${charactersNeedingDescriptions.length} new characters...`, 15);
+            
+            const enhancedCharacters = await geminiService.generateCharacterDescriptions(charactersNeedingDescriptions, config);
+            
+            // Merge back with original characters
+            return mergedCharacters.map(char => {
+                const enhanced = enhancedCharacters.find(e => e.id === char.id);
+                return enhanced || char;
+            });
+        }
+
+        return mergedCharacters;
+    }
+
     private async enhanceCharacters(
         characters: Character[],
+        config: StoryConfig,
         onProgress?: (message: string, progress: number) => void
     ): Promise<Character[]> {
         // Characters with uploaded images keep their original info
@@ -72,7 +195,7 @@ export class StoryGenerator {
 
         onProgress?.(`Describing ${charactersNeedingDescriptions.length} characters...`, 15);
         
-        const enhancedCharacters = await geminiService.generateCharacterDescriptions(charactersNeedingDescriptions);
+        const enhancedCharacters = await geminiService.generateCharacterDescriptions(charactersNeedingDescriptions, config);
         
         // Merge back with original characters
         return characters.map(char => {
@@ -166,6 +289,45 @@ export class StoryGenerator {
             console.error(`[STORY_GENERATOR] Failed to regenerate panel ${panel.id}:`, error);
             throw error;
         }
+    }
+
+    // Generate animated cover video for completed story
+    async generateCoverVideo(
+        story: GeneratedStory,
+        onProgress?: (message: string, progress: number) => void
+    ): Promise<{ videoUrl: string; requestId: string }> {
+        try {
+            if (!story.coverImage) {
+                throw new Error("Story must have a cover image to generate video");
+            }
+
+            onProgress?.("Creating cover animation...", 10);
+            
+            const videoResult = await videoGenerator.generateCoverVideo(story, {
+                duration: "8s",
+                resolution: "720p",
+                generateAudio: true
+            });
+
+            onProgress?.("Cover video generated!", 100);
+            
+            console.log('[STORY_GENERATOR] Cover video generated successfully:', videoResult.requestId);
+            return videoResult;
+
+        } catch (error: any) {
+            console.error('[STORY_GENERATOR] Error generating cover video:', error);
+            throw new Error(`Failed to generate cover video: ${error.message}`);
+        }
+    }
+
+    // Check video generation status
+    async checkVideoStatus(requestId: string) {
+        return await videoGenerator.checkVideoStatus(requestId);
+    }
+
+    // Get completed video result
+    async getVideoResult(requestId: string) {
+        return await videoGenerator.getVideoResult(requestId);
     }
 }
 

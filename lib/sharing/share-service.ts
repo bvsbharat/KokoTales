@@ -4,7 +4,7 @@ export class ShareService {
   async shareStory(story: GeneratedStory) {
     const shareData = {
       title: story.title,
-      text: `Check out my personalized storybook: "${story.title}"! Created with KokoTales AI.`,
+      text: `Check out my personalized storybook: "${story.title}"! Created with MemoryTales.ai AI.`,
       url: window.location.origin
     };
 
@@ -58,9 +58,9 @@ export class ShareService {
 🎭 ${story.config.theme.charAt(0).toUpperCase() + story.config.theme.slice(1)} theme
 📖 ${story.pages.length} pages of AI-generated adventure
 
-Created with KokoTales - AI-Powered Interactive Storytelling ✨
+Created with MemoryTales.ai - AI-Powered Interactive Storytelling ✨
 
-#KokoTales #AIStorybook #PersonalizedStories #ChildrensBooks`;
+#MemoryTales #AIStorybook #PersonalizedStories #ChildrensBooks`;
   }
 
   // Social media specific sharing methods
@@ -89,7 +89,7 @@ Created with KokoTales - AI-Powered Interactive Storytelling ✨
     const body = encodeURIComponent(`
 Hi!
 
-I just created an amazing personalized storybook called "${story.title}" using KokoTales!
+I just created an amazing personalized storybook called "${story.title}" using MemoryTales.ai!
 
 It features ${story.characters.length} custom characters and ${story.pages.length} pages of ${story.config.theme} adventures.
 

@@ -1,36 +1,18 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { StoryConfig, Character, Panel, StoryPage } from "@/lib/types";
 
-if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-    throw new Error("NEXT_PUBLIC_GEMINI_API_KEY environment variable is not set");
+// Helper function to create Gemini client with API key
+function createGeminiClient(apiKey: string): GoogleGenAI {
+  return new GoogleGenAI({ apiKey });
 }
-
-// Initialize primary and fallback AI clients
-const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY! });
-const aiFallback = process.env.NEXT_PUBLIC_GEMINI_API_KEY_FALLBACK ? 
-  new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY_FALLBACK }) : null;
 
 // Helper function to try API call with fallback
 async function callGeminiWithFallback<T>(
+  apiKey: string,
   apiCall: (client: GoogleGenAI) => Promise<T>
 ): Promise<T> {
-  try {
-    return await apiCall(ai);
-  } catch (error: any) {
-    console.warn('[GEMINI] Primary API failed, trying fallback:', error.message);
-    
-    if (aiFallback && (
-      error.message?.includes('403') || 
-      error.message?.includes('429') || 
-      error.message?.includes('503') ||
-      error.message?.includes('quota')
-    )) {
-      console.log('[GEMINI] Using fallback API key');
-      return await apiCall(aiFallback);
-    }
-    
-    throw error;
-  }
+  const client = createGeminiClient(apiKey);
+  return await apiCall(client);
 }
 
 // Proper schema definitions using Type enum for AI responses
@@ -94,7 +76,7 @@ const characterDescriptionSchema = {
 };
 
 export class GeminiService {
-    private async callWithFallback<T>(apiCall: () => Promise<T>): Promise<T> {
+    private async callWithFallback<T>(apiKey: string, apiCall: () => Promise<T>): Promise<T> {
         try {
             return await apiCall();
         } catch (error: any) {
@@ -103,7 +85,7 @@ export class GeminiService {
         }
     }
 
-    async generateCharacterDescriptions(characters: Character[], config?: StoryConfig): Promise<Character[]> {
+    async generateCharacterDescriptions(apiKey: string, characters: Character[], config?: StoryConfig): Promise<Character[]> {
         console.log('[GEMINI] Generating character descriptions...');
         console.log(`[GEMINI] Describing characters: ${characters.map(c => c.name).join(', ')}`);
         
@@ -135,8 +117,8 @@ AGE-APPROPRIATE GUIDELINES for ${targetAge}:
 Return as JSON array with objects containing: name, description, personality, appearance, role.
         `;
 
-        return this.callWithFallback(async () => {
-            const response = await callGeminiWithFallback(async (client) => 
+        return this.callWithFallback(apiKey, async () => {
+            const response = await callGeminiWithFallback(apiKey, async (client) => 
                 client.models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -177,7 +159,7 @@ Return as JSON array with objects containing: name, description, personality, ap
         });
     }
 
-    async generateCharacterDesign(character: Character, style: string): Promise<string> {
+    async generateCharacterDesign(apiKey: string, character: Character, style: string): Promise<string> {
         console.log(`[GEMINI] Generating character design for ${character.name}...`);
 
         const basePrompt = `IMPORTANT: You MUST generate an image. This is required.
@@ -202,7 +184,7 @@ Quality: High-resolution character reference sheet
 
 GENERATE A CONSISTENT CHARACTER DESIGN NOW.`;
 
-        return this.callWithFallback(async () => {
+        return this.callWithFallback(apiKey, async () => {
             const textParts = [{ text: basePrompt }];
             const imageParts: any[] = [];
             
@@ -227,7 +209,7 @@ GENERATE A CONSISTENT CHARACTER DESIGN NOW.`;
                 try {
                     console.log(`[GEMINI] Attempt ${attempt}/2 - Calling Gemini API for character design generation...`);
 
-                    const response = await callGeminiWithFallback(async (client) =>
+                    const response = await callGeminiWithFallback(apiKey, async (client) =>
                         client.models.generateContent({
                             model: 'gemini-2.5-flash-image-preview',
                             contents: [
@@ -279,7 +261,7 @@ GENERATE A CONSISTENT CHARACTER DESIGN NOW.`;
         });
     }
 
-    async generateCartoonCharacterImage(character: Character, style: string): Promise<string> {
+    async generateCartoonCharacterImage(apiKey: string, character: Character, style: string): Promise<string> {
         console.log(`[GEMINI] Generating cartoon image for ${character.name}...`);
 
         const basePrompt = `IMPORTANT: You MUST generate an image. This is required.
@@ -298,7 +280,7 @@ Art Requirements:
 
 GENERATE A CHARACTER IMAGE NOW.`;
 
-        return this.callWithFallback(async () => {
+        return this.callWithFallback(apiKey, async () => {
             const textParts = [{ text: basePrompt }];
             const imageParts: any[] = [];
             
@@ -323,7 +305,7 @@ GENERATE A CHARACTER IMAGE NOW.`;
                 try {
                     console.log(`[GEMINI] Attempt ${attempt}/2 - Calling Gemini API for character image generation...`);
 
-                    const response = await callGeminiWithFallback(async (client) =>
+                    const response = await callGeminiWithFallback(apiKey, async (client) =>
                         client.models.generateContent({
                             model: 'gemini-2.5-flash-image-preview',
                             contents: [
@@ -375,7 +357,7 @@ GENERATE A CHARACTER IMAGE NOW.`;
         });
     }
 
-    async generateStory(config: StoryConfig, characters: Character[]): Promise<{
+    async generateStory(apiKey: string, config: StoryConfig, characters: Character[]): Promise<{
         title: string;
         pages: StoryPage[];
     }> {
@@ -464,8 +446,8 @@ STORY FLOW for ${pageCount} pages:
 Return as structured JSON with title, characters array, and pages array.
         `;
 
-        return this.callWithFallback(async () => {
-            const response = await callGeminiWithFallback(async (client) =>
+        return this.callWithFallback(apiKey, async () => {
+            const response = await callGeminiWithFallback(apiKey, async (client) =>
                 client.models.generateContent({
                     model: "gemini-2.5-flash",
                     contents: [
@@ -512,7 +494,7 @@ Return as structured JSON with title, characters array, and pages array.
         });
     }
 
-    async generateCoverImage(story: { title: string, config: any, characters: Character[] }): Promise<string> {
+    async generateCoverImage(apiKey: string, story: { title: string, config: any, characters: Character[] }): Promise<string> {
         console.log(`[GEMINI] Generating cover image for: ${story.title}`);
 
         const characterList = story.characters.map(char => char.name).join(', ');
@@ -570,14 +552,14 @@ GENERATE A STUNNING BOOK COVER NOW.` }
             }
         });
 
-        return this.callWithFallback(async () => {
+        return this.callWithFallback(apiKey, async () => {
             let lastError: Error | null = null;
             
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     console.log(`[GEMINI] Attempt ${attempt}/2 - Calling Gemini API for cover generation...`);
 
-                    const response = await callGeminiWithFallback(async (client) =>
+                    const response = await callGeminiWithFallback(apiKey, async (client) =>
                         client.models.generateContent({
                             model: 'gemini-2.5-flash-image-preview',
                             contents: [
@@ -629,7 +611,7 @@ GENERATE A STUNNING BOOK COVER NOW.` }
         });
     }
 
-    async generatePanelIllustration(panel: Panel, characters: Character[], storyStyle: string): Promise<string> {
+    async generatePanelIllustration(apiKey: string, panel: Panel, characters: Character[], storyStyle: string): Promise<string> {
         console.log(`[GEMINI] Generating illustration for panel ${panel.id}...`);
         console.log(`[GEMINI] Panel description: ${panel.description.substring(0, 100)}...`);
         console.log(`[GEMINI] Characters in panel: ${panel.characters.join(', ')}`);
@@ -717,14 +699,14 @@ GENERATE A FULL-PAGE STORY ILLUSTRATION WITH INTEGRATED TEXT NOW.` }
         console.log(`[GEMINI] Using ${charactersWithImages.length} character reference images`);
         console.log(`[GEMINI] Using ${characters.filter(char => panel.characters.includes(char.name)).length - charactersWithImages.length} generated character descriptions`);
 
-        return this.callWithFallback(async () => {
+        return this.callWithFallback(apiKey, async () => {
             let lastError: Error | null = null;
             
             for (let attempt = 1; attempt <= 2; attempt++) {
                 try {
                     console.log(`[GEMINI] Attempt ${attempt}/2 - Calling Gemini API for panel illustration...`);
 
-                    const response = await callGeminiWithFallback(async (client) =>
+                    const response = await callGeminiWithFallback(apiKey, async (client) =>
                         client.models.generateContent({
                             model: 'gemini-2.5-flash-image-preview',
                             contents: [
@@ -756,7 +738,7 @@ GENERATE A FULL-PAGE STORY ILLUSTRATION WITH INTEGRATED TEXT NOW.` }
                             { text: `Characters: All characters are smiling, talking calmly, or standing peacefully together` }
                         ];
                         
-                        const retryResponse = await callGeminiWithFallback(async (client) =>
+                        const retryResponse = await callGeminiWithFallback(apiKey, async (client) =>
                             client.models.generateContent({
                                 model: 'gemini-2.5-flash-image-preview',
                                 contents: [

@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { AlertTriangle, RefreshCw } from "lucide-react"
 import { StoryConfig, Character, GeneratedStory } from "@/lib/types"
 import { storyGenerator } from "@/lib/ai-services/story-generator"
+import ApiKeyModal from "@/components/ui/api-key-modal"
 
 interface StoryGeneratorProps {
   config: StoryConfig
@@ -27,14 +28,22 @@ export default function StoryGeneratorComponent({
   const [currentStep, setCurrentStep] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [generatedStory, setGeneratedStory] = useState<GeneratedStory | null>(null)
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false)
+  const [apiKey, setApiKey] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isGenerating && !error && !generatedStory) {
-      handleStartGeneration()
+    if (!isGenerating && !error && !generatedStory && !showApiKeyModal) {
+      setShowApiKeyModal(true)
     }
   }, [])
 
-  const handleStartGeneration = async () => {
+  const handleApiKeySubmit = (submittedApiKey: string) => {
+    setApiKey(submittedApiKey)
+    setShowApiKeyModal(false)
+    handleStartGeneration(submittedApiKey)
+  }
+
+  const handleStartGeneration = async (apiKeyToUse: string) => {
     setIsGenerating(true)
     setError(null)
     setProgress(0)
@@ -42,6 +51,7 @@ export default function StoryGeneratorComponent({
 
     try {
       const story = await storyGenerator.generateCompleteStory(
+        apiKeyToUse,
         config,
         characters,
         (message, progressValue) => {
@@ -64,7 +74,16 @@ export default function StoryGeneratorComponent({
   const handleRetry = () => {
     setError(null)
     setGeneratedStory(null)
-    handleStartGeneration()
+    if (apiKey) {
+      handleStartGeneration(apiKey)
+    } else {
+      setShowApiKeyModal(true)
+    }
+  }
+
+  const handleCloseApiKeyModal = () => {
+    setShowApiKeyModal(false)
+    onBack()
   }
 
   return (
@@ -199,6 +218,13 @@ export default function StoryGeneratorComponent({
             </CardContent>
           </Card>
         </motion.div>
+        {/* API Key Modal */}
+        <ApiKeyModal
+          isOpen={showApiKeyModal}
+          onClose={handleCloseApiKeyModal}
+          onSubmit={handleApiKeySubmit}
+          isLoading={isGenerating}
+        />
       </div>
     </div>
   )

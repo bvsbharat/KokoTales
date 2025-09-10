@@ -7,6 +7,7 @@ import { storyStorage } from "@/lib/storage/story-storage";
 
 export class StoryGenerator {
     async generateCompleteStory(
+        apiKey: string,
         config: StoryConfig,
         characters: Character[],
         onProgress?: (message: string, progress: number) => void
@@ -15,12 +16,12 @@ export class StoryGenerator {
             onProgress?.("Preparing characters...", 5);
 
             // Step 1: Load existing characters from storage or enhance new ones
-            const charactersWithDescriptions = await this.loadAndEnhanceCharacters(characters, config, onProgress);
+            const charactersWithDescriptions = await this.loadAndEnhanceCharacters(apiKey, characters, config, onProgress);
 
             onProgress?.("Creating story structure...", 25);
 
             // Step 2: Generate the main story content
-            const storyData = await geminiService.generateStory(config, charactersWithDescriptions);
+            const storyData = await geminiService.generateStory(apiKey, config, charactersWithDescriptions);
 
             onProgress?.("Using approved character designs...", 35);
 
@@ -35,6 +36,7 @@ export class StoryGenerator {
 
             // Step 3: Generate panel illustrations using character design references
             const pagesWithIllustrations = await this.generatePanelArt(
+                apiKey,
                 storyData.pages,
                 charactersWithDesigns,
                 config.style,
@@ -46,7 +48,7 @@ export class StoryGenerator {
             // Step 4: Generate cover image
             let coverImage: string | undefined;
             try {
-                coverImage = await geminiService.generateCoverImage({
+                coverImage = await geminiService.generateCoverImage(apiKey, {
                     title: storyData.title,
                     config,
                     characters: charactersWithDesigns
@@ -131,6 +133,7 @@ export class StoryGenerator {
     }
 
     private async loadAndEnhanceCharacters(
+        apiKey: string,
         characters: Character[],
         config: StoryConfig,
         onProgress?: (message: string, progress: number) => void
@@ -168,7 +171,7 @@ export class StoryGenerator {
         if (charactersNeedingDescriptions.length > 0) {
             onProgress?.(`Describing ${charactersNeedingDescriptions.length} new characters...`, 15);
             
-            const enhancedCharacters = await geminiService.generateCharacterDescriptions(charactersNeedingDescriptions, config);
+            const enhancedCharacters = await geminiService.generateCharacterDescriptions(apiKey, charactersNeedingDescriptions, config);
             
             // Merge back with original characters
             return mergedCharacters.map(char => {
@@ -181,6 +184,7 @@ export class StoryGenerator {
     }
 
     private async enhanceCharacters(
+        apiKey: string,
         characters: Character[],
         config: StoryConfig,
         onProgress?: (message: string, progress: number) => void
@@ -195,7 +199,7 @@ export class StoryGenerator {
 
         onProgress?.(`Describing ${charactersNeedingDescriptions.length} characters...`, 15);
         
-        const enhancedCharacters = await geminiService.generateCharacterDescriptions(charactersNeedingDescriptions, config);
+        const enhancedCharacters = await geminiService.generateCharacterDescriptions(apiKey, charactersNeedingDescriptions, config);
         
         // Merge back with original characters
         return characters.map(char => {
@@ -205,6 +209,7 @@ export class StoryGenerator {
     }
 
     private async generateCharacterArt(
+        apiKey: string,
         characters: Character[],
         style: string,
         onProgress?: (message: string, progress: number) => void
@@ -216,7 +221,7 @@ export class StoryGenerator {
             onProgress?.(`Drawing ${character.name}...`, 50 + (i / characters.length) * 15);
 
             try {
-                const artworkUrl = await geminiService.generateCartoonCharacterImage(character, style);
+                const artworkUrl = await geminiService.generateCartoonCharacterImage(apiKey, character, style);
                 charactersWithArt.push({
                     ...character,
                     generatedArtwork: artworkUrl
@@ -231,6 +236,7 @@ export class StoryGenerator {
     }
 
     private async generatePanelArt(
+        apiKey: string,
         pages: StoryPage[],
         characters: Character[],
         style: string,
@@ -250,6 +256,7 @@ export class StoryGenerator {
 
                 try {
                     const illustration = await geminiService.generatePanelIllustration(
+                        apiKey,
                         panel,
                         characters,
                         style
@@ -275,12 +282,13 @@ export class StoryGenerator {
 
     // Helper method to regenerate failed panels
     async regeneratePanel(
+        apiKey: string,
         panel: Panel,
         characters: Character[],
         style: string
     ): Promise<Panel> {
         try {
-            const illustration = await geminiService.generatePanelIllustration(panel, characters, style);
+            const illustration = await geminiService.generatePanelIllustration(apiKey, panel, characters, style);
             return {
                 ...panel,
                 imageUrl: illustration

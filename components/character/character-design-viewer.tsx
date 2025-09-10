@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { RefreshCw, Check, X, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import { Character } from "@/lib/types";
 import { geminiService } from "@/lib/ai-services/gemini-service";
+import ApiKeyModal from "@/components/ui/api-key-modal";
 
 interface CharacterDesignViewerProps {
   characters: Character[];
@@ -30,12 +31,25 @@ export default function CharacterDesignViewer({
     string | null
   >(null);
   const [progress, setProgress] = useState(0);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   useEffect(() => {
-    generateInitialDesigns();
+    setShowApiKeyModal(true);
   }, []);
 
-  const generateInitialDesigns = async () => {
+  const handleApiKeySubmit = (submittedApiKey: string) => {
+    setApiKey(submittedApiKey);
+    setShowApiKeyModal(false);
+    generateInitialDesigns(submittedApiKey);
+  };
+
+  const handleCloseApiKeyModal = () => {
+    setShowApiKeyModal(false);
+    onBack();
+  };
+
+  const generateInitialDesigns = async (apiKeyToUse: string) => {
     setIsGenerating(true);
     const updatedCharacters = [...designCharacters];
 
@@ -46,6 +60,7 @@ export default function CharacterDesignViewer({
 
       try {
         const designImage = await geminiService.generateCharacterDesign(
+          apiKeyToUse,
           character,
           storyStyle
         );
@@ -71,11 +86,12 @@ export default function CharacterDesignViewer({
 
   const regenerateCharacterDesign = async (characterId: string) => {
     const character = designCharacters.find((c) => c.id === characterId);
-    if (!character) return;
+    if (!character || !apiKey) return;
 
     setGeneratingCharacterId(characterId);
     try {
       const designImage = await geminiService.generateCharacterDesign(
+        apiKey,
         character,
         storyStyle
       );
@@ -254,14 +270,17 @@ export default function CharacterDesignViewer({
                           </div>
                         </div>
                       ) : currentCharacter.generatedDesignImage ? (
-                        <div
-                          className="w-full h-96 border-4 border-black bg-contain bg-center bg-no-repeat bg-gray-50"
-                          style={{
-                            backgroundImage: `url(${currentCharacter.generatedDesignImage})`,
-                          }}
-                          role="img"
-                          aria-label={`${currentCharacter.name} design`}
-                        />
+                        <div className="w-full h-96 border-4 border-black bg-gray-50 flex items-center justify-center overflow-hidden">
+                          <img
+                            src={currentCharacter.generatedDesignImage}
+                            alt={`${currentCharacter.name} design`}
+                            className="max-w-full max-h-full object-contain"
+                            onError={(e) => {
+                              console.error('Failed to load character design image:', e);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
                       ) : (
                         <div className="w-full h-96 bg-gray-200 border-4 border-black flex items-center justify-center">
                           <div className="text-center">
@@ -399,6 +418,14 @@ export default function CharacterDesignViewer({
 
           </motion.div>
         )}
+
+        {/* API Key Modal */}
+        <ApiKeyModal
+          isOpen={showApiKeyModal}
+          onClose={handleCloseApiKeyModal}
+          onSubmit={handleApiKeySubmit}
+          isLoading={isGenerating}
+        />
       </div>
     </div>
   );

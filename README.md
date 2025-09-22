@@ -11,6 +11,7 @@ Live demo link : https://koko-tales.vercel.app/
 👥 **Character Personalization** - Upload photos to create personalized cartoon characters
 📖 **Multiple Story Formats** - Comic books, picture books, fairy tales, graphic novels
 🎭 **Interactive Character Selection** - 4-card swipe interface for character management
+🎬 **Animated Cover Videos** - Generate dynamic animated videos from story cover images
 📱 **Responsive Design** - Optimized for mobile and desktop experiences
 💫 **Real-time Generation** - Live progress tracking during story creation
 
@@ -19,6 +20,7 @@ Live demo link : https://koko-tales.vercel.app/
 - **Framework**: Next.js 14 with TypeScript
 - **Styling**: Tailwind CSS with custom comic book theme
 - **AI Integration**: Google Gemini API
+- **Video Generation**: FAL AI (Veo3 Image-to-Video)
 - **Animation**: Framer Motion
 - **UI Components**: Radix UI primitives
 - **File Upload**: React Dropzone
@@ -29,6 +31,7 @@ Live demo link : https://koko-tales.vercel.app/
 
 - Node.js 18+ 
 - Google Gemini API key
+- FAL AI API key (for video generation)
 
 ### Installation
 
@@ -48,9 +51,10 @@ Live demo link : https://koko-tales.vercel.app/
    cp .env.example .env.local
    ```
    
-   Add your Google Gemini API key to `.env.local`:
+   Add your API keys to `.env.local`:
    ```
-   GEMINI_API_KEY=your_gemini_api_key_here
+   NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+   FAL_KEY=your_fal_api_key_here
    ```
 
 4. **Run the development server**
@@ -104,12 +108,25 @@ MemoryTales.ai/
 - View in fullscreen mode
 - Share or download your creation
 
+### 5. Animated Cover Video Generation
+- Generate dynamic animated videos from your story's cover image
+- AI creates contextual animations based on story theme and characters
+- Download videos in MP4 format for sharing
+- Real-time progress tracking during video creation
+
 ## API Integration
 
-The app integrates with Google Gemini API for:
+The app integrates with multiple AI services:
+
+### Google Gemini API
 - **Story Structure Generation**: Creating plot, characters, and panels
 - **Character Description**: Generating detailed character profiles
 - **Image Generation**: Creating cartoon-style illustrations (placeholder implementation)
+
+### FAL AI (Veo3 Image-to-Video)
+- **Cover Video Generation**: Converting static cover images into animated videos
+- **Dynamic Animation**: Context-aware animations based on story themes
+- **High-Quality Output**: 720p/1080p video generation with audio support
 
 ## Customization
 
@@ -144,6 +161,59 @@ Add new story styles in the main page configuration:
 3. **AI Enhancements**: Modify services in `lib/ai-services/`
 4. **Styling Changes**: Update `app/globals.css` and Tailwind config
 
+## Video Generation Workflow
+
+The animated cover video feature transforms static story cover images into dynamic, contextual animations using AI.
+
+### How It Works
+
+1. **Story Analysis**: The system analyzes your story's theme, characters, and content
+2. **Animation Prompt Generation**: Creates contextual animation prompts based on:
+   - Story theme (adventure, fantasy, mystery, etc.)
+   - Main characters and their roles
+   - Art style and visual elements
+3. **Video Processing**: Uses FAL AI's Veo3 model to generate 8-second animated videos
+4. **Real-time Updates**: Provides live progress tracking during generation
+5. **Download & Share**: Allows users to download MP4 files for sharing
+
+### Video Generation Components
+
+```
+components/storybook/
+├── cover-video-generator.tsx    # Main video generation UI component
+└── storybook-viewer.tsx        # Integrated storybook viewer
+
+lib/ai-services/
+├── video-generator.ts          # Core video generation service
+└── story-generator.ts          # Story analysis and prompt creation
+
+hooks/
+└── use-video-generation.ts     # React hook for video state management
+
+app/api/
+└── generate-video/             # API endpoints for video processing
+```
+
+### Animation Themes
+
+The system creates different animation styles based on story themes:
+
+- **Adventure**: Heroic poses with wind effects and magical particles
+- **Fantasy**: Magical elements with glowing particles and ethereal effects
+- **Mystery**: Subtle shadows and mysterious fog effects
+- **Friendship**: Warm expressions with floating hearts or butterflies
+- **Default**: Natural movements with environmental elements
+
+### Configuration Options
+
+```typescript
+interface VideoGenerationOptions {
+  duration?: "8s";              // Video length
+  resolution?: "720p" | "1080p"; // Output quality
+  generateAudio?: boolean;       // Include audio generation
+}
+```
+
 ## Production Considerations
 
 ### Image Generation
@@ -152,15 +222,23 @@ Current implementation uses placeholder SVGs. For production:
 - Implement proper image storage and CDN
 - Add image optimization and caching
 
+### Video Generation
+- FAL AI integration provides production-ready video generation
+- Supports high-quality output (720p/1080p)
+- Built-in progress tracking and error handling
+- Automatic retry mechanisms for failed generations
+
 ### Performance
 - Implement lazy loading for story panels
 - Add request caching for AI calls
 - Optimize bundle size with code splitting
+- Video generation runs asynchronously to prevent UI blocking
 
 ### Security
 - Rate limiting for API calls
 - Input validation and sanitization
 - Proper error handling and logging
+- Secure API key management for FAL AI integration
 
 ## Contributing
 

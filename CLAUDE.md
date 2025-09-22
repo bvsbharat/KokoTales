@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with the MemoryTales.ai application.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Development Commands
 
@@ -11,15 +11,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## Environment Setup
 
-This app requires Google Gemini API access:
+This app requires multiple API keys:
 - Copy `.env.example` to `.env.local`
 - Set `NEXT_PUBLIC_GEMINI_API_KEY` with your Google Gemini API key
 - Optionally set `NEXT_PUBLIC_GEMINI_API_KEY_FALLBACK` for rate limit fallback
-- The key is accessed via `process.env.NEXT_PUBLIC_GEMINI_API_KEY` in the code
+- Set `FAL_KEY` for video generation functionality via fal-ai/client
+- The keys are accessed via environment variables in the code
 
 ## Architecture Overview
 
-MemoryTales.ai is a Next.js-based AI storytelling application that creates personalized illustrated storybooks using Google's Gemini API.
+KokoTales (formerly MemoryTales.ai) is a Next.js-based AI storytelling application that creates personalized illustrated storybooks using Google's Gemini API and video generation through fal.ai.
 
 ### Application Flow
 1. **Story Input** (`GenerationState.INPUT`) - User configures story parameters
@@ -29,12 +30,14 @@ MemoryTales.ai is a Next.js-based AI storytelling application that creates perso
 
 ### Key Components Structure
 - **app/page.tsx** - Main application with state management and flow control
+- **app/api/** - API routes for Gemini text generation and video generation
 - **components/character/** - Character selection and management UI
 - **components/story/** - Story generation progress and controls
-- **components/storybook/** - Storybook viewing and interaction
-- **lib/ai-services/** - AI integration services (Gemini API)
+- **components/storybook/** - Storybook viewing and interaction, including video overlay
+- **lib/ai-services/** - AI integration services (Gemini API, video generation)
 - **lib/export/** - PDF generation and export functionality
 - **lib/sharing/** - Social media sharing services
+- **lib/storage/** - Character and story persistence utilities
 
 ### Data Flow & State Management
 The application uses React state with TypeScript for type safety:
@@ -44,19 +47,23 @@ The application uses React state with TypeScript for type safety:
 - `GenerationState` - Application flow state machine
 
 ### AI Service Integration
-The `geminiService.ts` handles AI operations:
-- `generateCharacterDescriptions()` - Creates character profiles from names
-- `generateStory()` - Creates structured story content with pages and panels
-- `generateCartoonCharacterImage()` - Creates character illustrations (placeholder implementation)
-- `generatePanelIllustration()` - Creates story panel artwork (placeholder implementation)
+The AI services are split across multiple files:
+- **geminiService.ts** - Core Gemini API integration with structured JSON schemas
+- **story-generator.ts** - High-level story generation orchestration
+- **video-generator.ts** - fal.ai integration for video content generation
+- **app/api/genai/text/route.ts** - Server-side API endpoint for text generation
+- **app/api/generate-video/** - Server-side video generation endpoints
 
 ### Tech Stack
 - Next.js 14 with TypeScript and App Router
 - Tailwind CSS with custom comic book design system
-- Google Gemini API (@google/genai) for AI generation
+- Google Gemini API (@google/genai) for AI text generation
+- fal.ai (@fal-ai/client) for video generation
 - Framer Motion for animations
 - Radix UI for accessible components
 - React Dropzone for file uploads
+- jsPDF + html2canvas for PDF export
+- Zod for schema validation
 
 ## Design System
 
